@@ -1,47 +1,80 @@
-﻿#Requires Autohotkey v2
-;AutoGUI creator: Alguimist autohotkey.com/boards/viewtopic.php?f=64&t=89901
-;AHKv2converter creator: github.com/mmikeww/AHK-v2-script-converter
-;EasyAutoGUI-AHKv2 github.com/samfisherirl/Easy-Auto-GUI-for-AHK-v2
+﻿Gui, Add, Text,, Управление ботами
 
-if A_LineFile = A_ScriptFullPath && !A_IsCompiled
+Loop, 3
 {
-	myGui := Constructor()
-	myGui.Show("w400 h655")
+    if (A_Index != 2) {
+        Gui, Add, Text,, ; Пустая строка для выравнивания
+    } else {
+        Gui, Add, Text,, Бот %A_Index%
+    }
+    Gui, Add, Button, x10 y+30 gToggleBot%A_Index% vButton%A_Index%, бота %A_Index%
+    Gui, Add, Text, x+5 yp vBotStatus%A_Index% cRed, ● ; Индикатор лампочка (красная - выключен)
 }
 
-Constructor()
-{	
-	myGui := Gui()
-	buttons := [
-		{ x: 16, y: 8 }, { x: 16, y: 56 }, { x: 16, y: 104 }, { x: 16, y: 152 },
-		{ x: 16, y: 200 }, { x: 16, y: 248 }, { x: 16, y: 296 }, { x: 16, y: 344 },
-		{ x: 16, y: 392 }, { x: 16, y: 440 }, { x: 16, y: 488 }, { x: 16, y: 536 },
-		{ x: 16, y: 584 }, { x: 208, y: 8 }, { x: 208, y: 56 }, { x: 208, y: 104 },
-		{ x: 208, y: 152 }, { x: 208, y: 200 }, { x: 208, y: 248 }, { x: 208, y: 296 },
-		{ x: 208, y: 344 }, { x: 208, y: 392 }, { x: 208, y: 440 }, { x: 208, y: 488 },
-		{ x: 208, y: 536 }, { x: 208, y: 584 }
-	]
-	buttonNames := [
-		"Бот 1", "Бот 2", "Бот 3", "Бот 4", "Бот 5", "Бот 6", "Бот 7", "Бот 8",
-		"Бот 9", "Бот 10", "Бот 11", "Бот 12", "Бот 13", "Бот 14", "Бот 15", "Бот 16",
-		"Бот 17", "Бот 18", "Бот 19", "Бот 20", "Бот 21", "Бот 22", "Бот 23", "Бот 24",
-		"Бот 25", "Бот 26"
-	]
-	for index, coords in buttons {
-		button := myGui.Add("Button", "x" coords.x " y" coords.y " w141 h39", buttonNames[index])
-		button.OnEvent("Click", OnEventHandler*)
-	}
-	SB := myGui.Add("StatusBar", , "Status Bar")
-	myGui.OnEvent('Close', (*) => ExitApp())
-	myGui.Title := "Window"
-	
-	return myGui
-}
+Gui, Add, Button, x10 y+30 gCheckForUpdates, Проверить обновления ; Кнопка для ручной проверки обновлений
 
-OnEventHandler(ctrl)
-{
-	ToolTip("Click! This is a sample action.`n"
-	. "Active GUI element values include:`n"  
-	. "Button => " ctrl.Text, 77, 277)
-	SetTimer () => ToolTip(), -3000 ; tooltip timer
-}
+Gui, Show, w400 h300, Бот GUI ; Увеличенный размер окна
+
+GuiControlGet, Button1Pos, Pos, Button1
+GuiControlGet, Button2Pos, Pos, Button2
+GuiControlGet, Button3Pos, Pos, Button3
+
+GuiControlGet, BotStatus1Pos, Pos, BotStatus1
+GuiControlGet, BotStatus2Pos, Pos, BotStatus2
+GuiControlGet, BotStatus3Pos, Pos, BotStatus3
+
+; Пример изменения координат
+GuiControl, Move, Button1, x50 y50
+GuiControl, Move, BotStatus1, x150 y50
+GuiControl, Move, Button2, x50 y100
+GuiControl, Move, BotStatus2, x150 y100
+GuiControl, Move, Button3, x50 y150
+GuiControl, Move, BotStatus3, x150 y150
+
+; Автообновление с GitHub
+SetTimer, CheckForUpdates, 3600000 ; Проверка обновлений каждый час
+
+CheckForUpdates:
+    RunWait, git fetch origin, , Hide
+    RunWait, git reset --hard origin/main, , Hide
+    Reload
+return
+
+ToggleBot1:
+    if (Bot1Status := !Bot1Status) {
+        ; Логика для включения бота 1
+        GuiControl,, BotStatus1, ● ; Индикатор лампочка (зелёная - включен)
+        GuiControl, +cGreen, BotStatus1
+    } else {
+        ; Логика для выключения бота 1
+        GuiControl,, BotStatus1, ● ; Индикатор лампочка (красная - выключен)
+        GuiControl, +cRed, BotStatus1
+    }
+return
+
+ToggleBot2:
+    if (Bot2Status := !Bot2Status) {
+        ; Логика для включения бота 2
+        GuiControl,, BotStatus2, ● ; Индикатор лампочка (зелёная - включен)
+        GuiControl, +cGreen, BotStatus2
+    } else {
+        ; Логика для выключения бота 2
+        GuiControl,, BotStatus2, ● ; Индикатор лампочка (красная - выключен)
+        GuiControl, +cRed, BotStatus2
+    }
+return
+
+ToggleBot3:
+    if (Bot3Status := !Bot3Status) {
+        ; Логика для включения бота 3
+        GuiControl,, BotStatus3, ● ; Индикатор лампочка (зелёная - включен)
+        GuiControl, +cGreen, BotStatus3
+    } else {
+        ; Логика для выключения бота 3
+        GuiControl,, BotStatus3, ● ; Индикатор лампочка (красная - выключен)
+        GuiControl, +cRed, BotStatus3
+    }
+return
+
+GuiClose:
+    ExitApp
