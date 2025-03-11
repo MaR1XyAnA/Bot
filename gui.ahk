@@ -38,9 +38,17 @@ CurrentVersion := "1.0.0" ; Текущая версия скрипта
 
 CheckForUpdates:
     UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/version.txt, %A_ScriptDir%\version_new.txt
+    if (ErrorLevel != 0) {
+        MsgBox, Ошибка при скачивании файла версии.
+        return
+    }
     FileRead, newVersion, %A_ScriptDir%\version_new.txt
     if (newVersion != CurrentVersion) {
         UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/gui.ahk, %A_ScriptDir%\gui_new.ahk
+        if (ErrorLevel != 0) {
+            MsgBox, Ошибка при скачивании нового файла GUI.
+            return
+        }
         FileMove, %A_ScriptDir%\gui_new.ahk, %A_ScriptFullPath%, 1
         FileMove, %A_ScriptDir%\version_new.txt, %A_ScriptDir%\version.txt, 1
         ; Удаление ненужных файлов
