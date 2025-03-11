@@ -42,7 +42,7 @@ CheckForUpdates:
         MsgBox, Ошибка при скачивании файла версии.
         return
     }
-    if (!FileExist("%A_ScriptDir%\version_new.txt")) {
+    if (!FileExist(A_ScriptDir "\version_new.txt")) {
         MsgBox, Файл версии не найден.
         return
     }
