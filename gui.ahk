@@ -11,7 +11,7 @@ Loop, 3
     Gui, Add, Text, x+5 yp vBotStatus%A_Index% cRed, ● ; Индикатор лампочка (красная - выключен)
 }
 
-Gui, Add, Button, x10 y+30 gCheckForUpdates, Проверить обновления ; Кнопка для ручной проверки обновлений
+Gui, Add, Button, x10 y+30 gCheckForUpdates, Проверить обновления (v1.0.1) ; Кнопка для ручной проверки обновлений
 
 Gui, Show, w400 h300, Бот GUI ; Увеличенный размер окна
 
@@ -34,7 +34,7 @@ GuiControl, Move, BotStatus3, x150 y150
 ; Автообновление с GitHub
 SetTimer, CheckForUpdates, 3600000 ; Проверка обновлений каждый час
 
-CurrentVersion := "1.0.0" ; Текущая версия скрипта
+CurrentVersion := "1.0.1" ; Текущая версия скрипта
 
 CheckForUpdates:
     UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/version.txt, %A_ScriptDir%\version_new.txt
