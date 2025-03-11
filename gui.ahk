@@ -34,10 +34,22 @@ GuiControl, Move, BotStatus3, x150 y150
 ; Автообновление с GitHub
 SetTimer, CheckForUpdates, 3600000 ; Проверка обновлений каждый час
 
+CurrentVersion := "1.0.0" ; Текущая версия скрипта
+
 CheckForUpdates:
-    RunWait, git fetch origin, , Hide
-    RunWait, git reset --hard origin/main, , Hide
-    Reload
+    UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/version.txt, %A_ScriptDir%\version_new.txt
+    FileRead, newVersion, %A_ScriptDir%\version_new.txt
+    if (newVersion != CurrentVersion) {
+        UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/gui.ahk, %A_ScriptDir%\gui_new.ahk
+        FileMove, %A_ScriptDir%\gui_new.ahk, %A_ScriptFullPath%, 1
+        FileMove, %A_ScriptDir%\version_new.txt, %A_ScriptDir%\version.txt, 1
+        ; Удаление ненужных файлов
+        FileDelete, %A_ScriptDir%\gui_old.ahk
+        FileDelete, %A_ScriptDir%\backup.ahk
+        Reload
+    } else {
+        FileDelete, %A_ScriptDir%\version_new.txt
+    }
 return
 
 ToggleBot1:
