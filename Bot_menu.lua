@@ -90,8 +90,8 @@ function updateScript()
         file:write(table.concat(response))
         file:close()
         print("Скрипт обновлен, перезапуск...")
-        os.execute("start Bot_menu.lua")
-        os.exit()
+        -- Перезапуск скрипта
+        dofile("Bot_menu.lua")
     else
         print("Не удалось обновить скрипт")
     end
