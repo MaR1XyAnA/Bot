@@ -11,7 +11,7 @@ Loop, 3
     Gui, Add, Text, x+5 yp vBotStatus%A_Index% cRed, ● ; Индикатор лампочка (красная - выключен)
 }
 
-Gui, Add, Button, x10 y+30 gCheckForUpdates, Проверить обновления (v1.0.1) ; Кнопка для ручной проверки обновлений
+Gui, Add, Button, x10 y+30 gCheckForUpdates, Проверить обновления (v1.0.3) ; Кнопка для ручной проверки обновлений
 
 Gui, Show, w400 h300, Бот GUI ; Увеличенный размер окна
 
@@ -34,7 +34,7 @@ GuiControl, Move, BotStatus3, x150 y150
 ; Автообновление с GitHub
 SetTimer, CheckForUpdates, 3600000 ; Проверка обновлений каждый час
 
-CurrentVersion := "1.0.1" ; Текущая версия скрипта
+CurrentVersion := "1.0.3" ; Текущая версия скрипта
 
 CheckForUpdates:
     UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/version.txt, %A_ScriptDir%\version_new.txt
@@ -47,10 +47,20 @@ CheckForUpdates:
         return
     }
     FileRead, newVersion, %A_ScriptDir%\version_new.txt
+    if (newVersion = "404: Not Found") {
+        MsgBox, Ошибка 404: Файл версии не найден на сервере.
+        FileDelete, %A_ScriptDir%\version_new.txt
+        return
+    }
     if (newVersion != CurrentVersion) {
         UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/gui.ahk, %A_ScriptDir%\gui_new.ahk
         if (ErrorLevel != 0) {
             MsgBox, Ошибка при скачивании нового файла GUI.
+            FileDelete, %A_ScriptDir%\version_new.txt
+            return
+        }
+        if (!FileExist(A_ScriptDir "\gui_new.ahk")) {
+            MsgBox, Новый файл GUI не найден.
             FileDelete, %A_ScriptDir%\version_new.txt
             return
         }
