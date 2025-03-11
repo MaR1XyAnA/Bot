@@ -42,11 +42,16 @@ CheckForUpdates:
         MsgBox, Ошибка при скачивании файла версии.
         return
     }
+    if (!FileExist("%A_ScriptDir%\version_new.txt")) {
+        MsgBox, Файл версии не найден.
+        return
+    }
     FileRead, newVersion, %A_ScriptDir%\version_new.txt
     if (newVersion != CurrentVersion) {
         UrlDownloadToFile, https://raw.githubusercontent.com/MaR1XyAnA/Bot/main/gui.ahk, %A_ScriptDir%\gui_new.ahk
         if (ErrorLevel != 0) {
             MsgBox, Ошибка при скачивании нового файла GUI.
+            FileDelete, %A_ScriptDir%\version_new.txt
             return
         }
         FileMove, %A_ScriptDir%\gui_new.ahk, %A_ScriptFullPath%, 1
