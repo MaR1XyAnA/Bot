@@ -91,7 +91,8 @@ function updateScript()
         file:close()
         print("Скрипт обновлен, перезапуск...")
         -- Перезапуск скрипта
-        dofile("Bot_menu.lua")
+        os.execute("lua Bot_menu.lua")
+        os.exit()
     else
         print("Не удалось обновить скрипт")
     end
