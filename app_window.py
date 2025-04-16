@@ -6,13 +6,14 @@ import logging
 # Настройка логирования
 logging.basicConfig(
     filename="error.log",
-    level=logging.ERROR,
+    level=logging.DEBUG,  # Установим уровень DEBUG для более подробного вывода
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 class BotApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        logging.debug("Инициализация окна приложения.")  # Логирование
         self.setWindowTitle("Bot Control Panel")
         self.setGeometry(100, 100, 400, 300)
 
@@ -45,27 +46,38 @@ class BotApp(QMainWindow):
 
         # Установка макета
         central_widget.setLayout(layout)
+        logging.debug("Окно приложения успешно инициализировано.")  # Логирование
 
     def start_bot(self):
+        logging.info("Запуск бота.")  # Логирование
         QMessageBox.information(self, "Информация", "Бот запущен!")
 
     def stop_bot(self):
+        logging.info("Остановка бота.")  # Логирование
         QMessageBox.information(self, "Информация", "Бот остановлен!")
 
     def exit_app(self):
+        logging.info("Выход из приложения.")  # Логирование
         QApplication.quit()
 
     def update_app(self):
+        logging.info("Обновление приложения.")  # Логирование
         repo_path = "./BotRepo"  # Локальная папка для репозитория
         repo_url = "https://github.com/MaR1XyAnA/Bot.git"  # URL вашего репозитория
-        auto_update(repo_path, repo_url)
+        try:
+            auto_update(repo_path, repo_url)
+        except Exception as e:
+            logging.error(f"Ошибка при обновлении приложения: {e}", exc_info=True)
+            QMessageBox.critical(self, "Ошибка", f"Не удалось обновить приложение: {e}")
 
 if __name__ == "__main__":
     try:
+        logging.debug("Запуск приложения...")  # Логирование
         print("Запуск приложения...")  # Отладочный вывод
         app = QApplication(sys.argv)
         window = BotApp()
         window.show()
+        logging.debug("Окно приложения отображено.")  # Логирование
         print("Окно приложения отображено.")  # Отладочный вывод
         sys.exit(app.exec_())
     except Exception as e:
