@@ -15,6 +15,12 @@ if not os.path.exists(os.path.join(os.path.dirname(__file__), "auto_update.py"))
     print("Файл auto_update.py не найден! Поместите auto_update.py в ту же папку, что и app_window.py.")
     sys.exit(1)
 
+# Явное создание файла логов, если он не существует
+log_file = "error.log"
+if not os.path.exists(log_file):
+    with open(log_file, "w", encoding="utf-8") as f:
+        f.write("Лог ошибок приложения\n")
+
 try:
     from auto_update import auto_update
 except Exception as e:
@@ -24,7 +30,7 @@ except Exception as e:
 
 # Настройка логирования
 logging.basicConfig(
-    filename="error.log",
+    filename=log_file,
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
