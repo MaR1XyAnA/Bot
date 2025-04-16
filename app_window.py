@@ -1,43 +1,51 @@
-import tkinter as tk
-from tkinter import messagebox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QMessageBox
 from auto_update import auto_update
+import sys
 
-class BotApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Bot Control Panel")
-        self.root.geometry("400x300")
+class BotApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Bot Control Panel")
+        self.setGeometry(100, 100, 400, 300)
 
-        # Заголовок
-        self.label = tk.Label(root, text="Управление ботом", font=("Arial", 16))
-        self.label.pack(pady=10)
+        # Основной виджет
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        # Макет
+        layout = QVBoxLayout()
 
         # Кнопка запуска бота
-        self.start_button = tk.Button(root, text="Запустить бота", command=self.start_bot, width=20)
-        self.start_button.pack(pady=10)
+        self.start_button = QPushButton("Запустить бота")
+        self.start_button.clicked.connect(self.start_bot)
+        layout.addWidget(self.start_button)
 
         # Кнопка остановки бота
-        self.stop_button = tk.Button(root, text="Остановить бота", command=self.stop_bot, width=20)
-        self.stop_button.pack(pady=10)
+        self.stop_button = QPushButton("Остановить бота")
+        self.stop_button.clicked.connect(self.stop_bot)
+        layout.addWidget(self.stop_button)
 
         # Кнопка выхода
-        self.exit_button = tk.Button(root, text="Выход", command=self.exit_app, width=20)
-        self.exit_button.pack(pady=10)
+        self.exit_button = QPushButton("Выход")
+        self.exit_button.clicked.connect(self.exit_app)
+        layout.addWidget(self.exit_button)
 
         # Кнопка автообновления
-        self.update_button = tk.Button(root, text="Обновить приложение", command=self.update_app, width=20)
-        self.update_button.pack(pady=10)
+        self.update_button = QPushButton("Обновить приложение")
+        self.update_button.clicked.connect(self.update_app)
+        layout.addWidget(self.update_button)
+
+        # Установка макета
+        central_widget.setLayout(layout)
 
     def start_bot(self):
-        # Логика запуска бота
-        messagebox.showinfo("Информация", "Бот запущен!")
+        QMessageBox.information(self, "Информация", "Бот запущен!")
 
     def stop_bot(self):
-        # Логика остановки бота
-        messagebox.showinfo("Информация", "Бот остановлен!")
+        QMessageBox.information(self, "Информация", "Бот остановлен!")
 
     def exit_app(self):
-        self.root.quit()
+        QApplication.quit()
 
     def update_app(self):
         repo_path = "./BotRepo"  # Локальная папка для репозитория
@@ -45,8 +53,7 @@ class BotApp:
         auto_update(repo_path, repo_url)
 
 if __name__ == "__main__":
-    print("Запуск приложения...")  # Отладочный вывод
-    root = tk.Tk()
-    app = BotApp(root)
-    root.mainloop()
-    print("Приложение закрыто.")  # Отладочный вывод
+    app = QApplication(sys.argv)
+    window = BotApp()
+    window.show()
+    sys.exit(app.exec_())
