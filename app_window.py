@@ -1,19 +1,38 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QMessageBox
-from auto_update import auto_update
+try:
+    from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QMessageBox
+except ImportError:
+    print("Ошибка импорта PyQt5. Убедитесь, что PyQt5 установлен: pip install PyQt5")
+    import sys
+    sys.exit(1)
+
 import sys
 import logging
+import traceback
+import os
+
+# Проверка наличия auto_update.py
+if not os.path.exists(os.path.join(os.path.dirname(__file__), "auto_update.py")):
+    print("Файл auto_update.py не найден! Поместите auto_update.py в ту же папку, что и app_window.py.")
+    sys.exit(1)
+
+try:
+    from auto_update import auto_update
+except Exception as e:
+    print(f"Ошибка импорта auto_update: {e}")
+    print(traceback.format_exc())
+    sys.exit(1)
 
 # Настройка логирования
 logging.basicConfig(
     filename="error.log",
-    level=logging.DEBUG,  # Установим уровень DEBUG для более подробного вывода
+    level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 class BotApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        logging.debug("Инициализация окна приложения.")  # Логирование
+        logging.debug("Инициализация окна приложения.")
         self.setWindowTitle("Bot Control Panel")
         self.setGeometry(100, 100, 400, 300)
 
@@ -46,24 +65,24 @@ class BotApp(QMainWindow):
 
         # Установка макета
         central_widget.setLayout(layout)
-        logging.debug("Окно приложения успешно инициализировано.")  # Логирование
+        logging.debug("Окно приложения успешно инициализировано.")
 
     def start_bot(self):
-        logging.info("Запуск бота.")  # Логирование
+        logging.info("Запуск бота.")
         QMessageBox.information(self, "Информация", "Бот запущен!")
 
     def stop_bot(self):
-        logging.info("Остановка бота.")  # Логирование
+        logging.info("Остановка бота.")
         QMessageBox.information(self, "Информация", "Бот остановлен!")
 
     def exit_app(self):
-        logging.info("Выход из приложения.")  # Логирование
+        logging.info("Выход из приложения.")
         QApplication.quit()
 
     def update_app(self):
-        logging.info("Обновление приложения.")  # Логирование
-        repo_path = "./BotRepo"  # Локальная папка для репозитория
-        repo_url = "https://github.com/MaR1XyAnA/Bot.git"  # URL вашего репозитория
+        logging.info("Обновление приложения.")
+        repo_path = "./BotRepo"
+        repo_url = "https://github.com/MaR1XyAnA/Bot.git"
         try:
             auto_update(repo_path, repo_url)
         except Exception as e:
@@ -72,15 +91,16 @@ class BotApp(QMainWindow):
 
 if __name__ == "__main__":
     try:
-        logging.debug("Запуск приложения...")  # Логирование
-        print("Запуск приложения...")  # Отладочный вывод
+        logging.debug("Запуск приложения...")
+        print("Запуск приложения...")
         app = QApplication(sys.argv)
         window = BotApp()
         window.show()
-        logging.debug("Окно приложения отображено.")  # Логирование
-        print("Окно приложения отображено.")  # Отладочный вывод
+        logging.debug("Окно приложения отображено.")
+        print("Окно приложения отображено.")
         sys.exit(app.exec_())
     except Exception as e:
         error_message = f"Ошибка при запуске приложения: {e}"
-        print(error_message)  # Вывод ошибки в консоль
-        logging.error(error_message, exc_info=True)  # Логирование ошибки
+        print(error_message)
+        print(traceback.format_exc())  # Вывод полного стека ошибки в консоль
+        logging.error(error_message, exc_info=True)
