@@ -1,6 +1,14 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QMessageBox
 from auto_update import auto_update
 import sys
+import logging
+
+# Настройка логирования
+logging.basicConfig(
+    filename="error.log",
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 class BotApp(QMainWindow):
     def __init__(self):
@@ -53,7 +61,14 @@ class BotApp(QMainWindow):
         auto_update(repo_path, repo_url)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = BotApp()
-    window.show()
-    sys.exit(app.exec_())
+    try:
+        print("Запуск приложения...")  # Отладочный вывод
+        app = QApplication(sys.argv)
+        window = BotApp()
+        window.show()
+        print("Окно приложения отображено.")  # Отладочный вывод
+        sys.exit(app.exec_())
+    except Exception as e:
+        error_message = f"Ошибка при запуске приложения: {e}"
+        print(error_message)  # Вывод ошибки в консоль
+        logging.error(error_message, exc_info=True)  # Логирование ошибки
