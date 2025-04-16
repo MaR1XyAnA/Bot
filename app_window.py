@@ -45,6 +45,8 @@ class BotApp:
         auto_update(repo_path, repo_url)
 
 if __name__ == "__main__":
+    print("Запуск приложения...")  # Отладочный вывод
     root = tk.Tk()
     app = BotApp(root)
     root.mainloop()
+    print("Приложение закрыто.")  # Отладочный вывод
