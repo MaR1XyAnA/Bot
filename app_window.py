@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+from auto_update import auto_update
 
 class BotApp:
     def __init__(self, root):
@@ -23,6 +24,10 @@ class BotApp:
         self.exit_button = tk.Button(root, text="Выход", command=self.exit_app, width=20)
         self.exit_button.pack(pady=10)
 
+        # Кнопка автообновления
+        self.update_button = tk.Button(root, text="Обновить приложение", command=self.update_app, width=20)
+        self.update_button.pack(pady=10)
+
     def start_bot(self):
         # Логика запуска бота
         messagebox.showinfo("Информация", "Бот запущен!")
@@ -33,6 +38,11 @@ class BotApp:
 
     def exit_app(self):
         self.root.quit()
+
+    def update_app(self):
+        repo_path = "./BotRepo"  # Локальная папка для репозитория
+        repo_url = "https://github.com/MaR1XyAnA/Bot.git"  # URL вашего репозитория
+        auto_update(repo_path, repo_url)
 
 if __name__ == "__main__":
     root = tk.Tk()
