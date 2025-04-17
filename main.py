@@ -8,7 +8,6 @@ from PIL import ImageGrab  # Для захвата экрана
 import cv2  # Для обработки изображений
 import numpy as np  # Для работы с массивами
 import os  # Для работы с файловой системой
-import subprocess  # Для выполнения git pull
 
 class FishingBot:
     def __init__(self):
@@ -218,24 +217,6 @@ class FishingBot:
     def stop(self):
         self.running = False
 
-    def update_from_github(self, repo_url="https://github.com/MaR1XyAnA/Bot.git"):
-        """
-        Автоматически обновляет файлы проекта с помощью git pull.
-        """
-        try:
-            # Проверяем, является ли текущая папка git-репозиторием
-            if not os.path.exists(".git"):
-                messagebox.showerror("Ошибка", "Текущая папка не является git-репозиторием.")
-                return
-            # Выполняем git pull
-            result = subprocess.run(["git", "pull", repo_url], capture_output=True, text=True)
-            if result.returncode == 0:
-                messagebox.showinfo("Обновление", "Обновление с GitHub завершено успешно!\n\n" + result.stdout)
-            else:
-                messagebox.showerror("Ошибка обновления", f"Ошибка при обновлении:\n{result.stderr}")
-        except Exception as e:
-            messagebox.showerror("Ошибка", f"Не удалось выполнить обновление: {e}")
-
 # Функции для управления ботом
 def start_bot():
     if not bot.running:
@@ -276,10 +257,6 @@ def click_fish():
         threading.Thread(target=bot.click_until_in_green_zone, daemon=True).start()
         messagebox.showinfo("Статус", "Нажатия кнопки мыши запущены!")
 
-# Функция для обновления с GitHub
-def update_bot():
-    threading.Thread(target=bot.update_from_github, daemon=True).start()
-
 # Создаем интерфейс
 bot = FishingBot()
 root = tk.Tk()
@@ -308,8 +285,5 @@ click_hook_button.pack(pady=10)
 
 click_fish_button = tk.Button(root, text="Нажимать для рыбки", command=click_fish, width=20)
 click_fish_button.pack(pady=10)
-
-update_button = tk.Button(root, text="Обновить с GitHub", command=update_bot, width=20)
-update_button.pack(pady=10)
 
 root.mainloop()
