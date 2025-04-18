@@ -17,8 +17,15 @@ from fishing_bot import FishingBot
 class FishingBotApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.bot = FishingBot(self.log_message)
-        self.init_ui()
+        try:
+            self.bot = FishingBot(self.log_message)
+            self.init_ui()
+        except Exception as e:
+            error_msg = f"Ошибка инициализации приложения: {e}\n{traceback.format_exc()}"
+            print(error_msg)
+            # Если log_text уже создан, выводим туда, иначе просто print
+            if hasattr(self, 'log_text'):
+                self.log_text.append(error_msg)
 
     def init_ui(self):
         self.setWindowTitle("Бот для автоматизации рыбалки")
@@ -100,13 +107,25 @@ class FishingBotApp(QWidget):
         self.log_text.append(msg)
 
     def start_bot(self):
-        self.bot.start()
+        try:
+            self.bot.start()
+        except Exception as e:
+            self.log_text.append(f"Ошибка запуска бота: {e}")
+            self.log_text.append(traceback.format_exc())
 
     def stop_bot(self):
-        self.bot.stop()
+        try:
+            self.bot.stop()
+        except Exception as e:
+            self.log_text.append(f"Ошибка остановки бота: {e}")
+            self.log_text.append(traceback.format_exc())
 
     def open_settings(self):
-        self.log_text.append("Открыто окно настроек (в разработке).")
+        try:
+            self.log_text.append("Открыто окно настроек (в разработке).")
+        except Exception as e:
+            self.log_text.append(f"Ошибка открытия настроек: {e}")
+            self.log_text.append(traceback.format_exc())
 
     def update_from_github(self):
         current_version = "v1.0.3"  # Укажите актуальную версию вашего приложения
@@ -177,7 +196,11 @@ class FishingBotApp(QWidget):
             self.log_text.append(traceback.format_exc())
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = FishingBotApp()
-    window.show()
-    sys.exit(app.exec_())
+    try:
+        app = QApplication(sys.argv)
+        window = FishingBotApp()
+        window.show()
+        sys.exit(app.exec_())
+    except Exception as e:
+        print(f"Ошибка запуска приложения: {e}")
+        print(traceback.format_exc())
