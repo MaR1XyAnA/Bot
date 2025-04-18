@@ -10,9 +10,13 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import Qt
 
+# Импортируем класс бота
+from fishing_bot import FishingBot
+
 class FishingBotApp(QWidget):
     def __init__(self):
         super().__init__()
+        self.bot = FishingBot(self.log_message)
         self.init_ui()
 
     def init_ui(self):
@@ -91,11 +95,14 @@ class FishingBotApp(QWidget):
         self.settings_btn.clicked.connect(self.open_settings)
         self.update_btn.clicked.connect(self.update_from_github)
 
+    def log_message(self, msg):
+        self.log_text.append(msg)
+
     def start_bot(self):
-        self.log_text.append("Бот запущен.")
+        self.bot.start()
 
     def stop_bot(self):
-        self.log_text.append("Бот остановлен.")
+        self.bot.stop()
 
     def open_settings(self):
         self.log_text.append("Открыто окно настроек (в разработке).")
