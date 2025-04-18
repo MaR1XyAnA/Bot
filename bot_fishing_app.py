@@ -122,16 +122,18 @@ class FishingBotApp(QWidget):
                 self.log_text.append("У вас уже установлена последняя версия.")
                 return
             assets = latest.get("assets", [])
-            if not assets:
-                self.log_text.append("В релизе нет доступных файлов для загрузки.")
+            zip_url = None
+            for asset in assets:
+                name = asset.get("name", "")
+                if name.endswith(".zip"):
+                    zip_url = asset.get("browser_download_url")
+                    break
+            if not zip_url:
+                self.log_text.append("В релизе нет zip-архива для загрузки.")
                 return
-            url = assets[0].get("browser_download_url")
-            if not url:
-                self.log_text.append("Не найден файл для загрузки в релизе.")
-                return
-            self.log_text.append(f"Скачивание новой версии: {url}")
-            with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
-                r = requests.get(url, stream=True, timeout=30)
+            self.log_text.append(f"Скачивание новой версии: {zip_url}")
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmpfile:
+                r = requests.get(zip_url, stream=True, timeout=30)
                 if r.status_code == 200:
                     for chunk in r.iter_content(chunk_size=8192):
                         tmpfile.write(chunk)
@@ -139,13 +141,23 @@ class FishingBotApp(QWidget):
                 else:
                     self.log_text.append(f"Ошибка скачивания: {r.status_code}")
                     return
-            # Заменить исполняемый файл (этот файл)
-            app_path = os.path.abspath(__file__)
+            # Распаковка архива и копирование файлов
             try:
-                shutil.copy2(tmpfile_path, app_path)
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    with zipfile.ZipFile(tmpfile_path, 'r') as zip_ref:
+                        zip_ref.extractall(tmpdir)
+                    # Копируем файлы из архива в текущую папку
+                    for root, dirs, files in os.walk(tmpdir):
+                        rel_path = os.path.relpath(root, tmpdir)
+                        dest_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+                        os.makedirs(dest_dir, exist_ok=True)
+                        for file in files:
+                            src_file = os.path.join(root, file)
+                            dst_file = os.path.join(dest_dir, file)
+                            shutil.copy2(src_file, dst_file)
                 self.log_text.append("Обновление завершено. Перезапустите приложение.")
             except Exception as e:
-                self.log_text.append(f"Ошибка при замене файла: {e}")
+                self.log_text.append(f"Ошибка при распаковке или копировании файлов: {e}")
             finally:
                 os.remove(tmpfile_path)
         except Exception as e:
