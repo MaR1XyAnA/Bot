@@ -5,6 +5,7 @@ import sys
 import requests
 import zipfile
 import io
+import tempfile
 
 current_version = "v1.0.0"  # Обновляйте вручную при релизе
 
@@ -33,21 +34,25 @@ def check_for_update():
                 print("Ошибка: Не найден zip-архив для релиза.")
                 return
             try:
-                r = requests.get(zip_url, stream=True, timeout=10)
-                if r.status_code != 200:
-                    print("Ошибка при скачивании архива:", r.status_code)
-                    return
-                z = zipfile.ZipFile(io.BytesIO(r.content))
-                for member in z.namelist():
-                    if member.endswith('/'):
-                        continue
-                    filename = os.path.relpath(member, start=z.namelist()[0])
-                    if filename == ".":
-                        continue
-                    target_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
-                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                    with open(target_path, "wb") as f:
-                        f.write(z.read(member))
+                # Сохраняем архив во временный файл, чтобы избежать проблем с памятью
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmpfile:
+                    for chunk in requests.get(zip_url, stream=True, timeout=30).iter_content(chunk_size=1024 * 1024):
+                        if chunk:
+                            tmpfile.write(chunk)
+                    tmpfile_path = tmpfile.name
+                with zipfile.ZipFile(tmpfile_path, "r") as z:
+                    root_folder = z.namelist()[0]
+                    for member in z.namelist():
+                        if member.endswith('/'):
+                            continue
+                        filename = os.path.relpath(member, start=root_folder)
+                        if filename == ".":
+                            continue
+                        target_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+                        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                        with open(target_path, "wb") as f:
+                            f.write(z.read(member))
+                os.remove(tmpfile_path)
                 print("Обновление завершено. Перезапускаем программу для применения изменений.")
                 messagebox.showinfo("Обновление", f"Доступна новая версия: {latest_version}.\nОбновление завершено.\nПрограмма будет перезапущена.")
                 python = sys.executable
@@ -55,6 +60,10 @@ def check_for_update():
             except requests.exceptions.RequestException as e:
                 print("Ошибка сети при скачивании архива:", e)
                 messagebox.showerror("Ошибка обновления", f"Ошибка сети при скачивании архива:\n{e}\nПроверьте подключение к интернету и повторите попытку.")
+                return
+            except Exception as e:
+                print("Ошибка при распаковке архива:", e)
+                messagebox.showerror("Ошибка обновления", f"Ошибка при распаковке архива:\n{e}")
                 return
         else:
             print("Установлена последняя версия.")
