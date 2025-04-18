@@ -10,6 +10,10 @@ import threading
 # Set QT platform to offscreen in Replit environment
 os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
+# --- Исправление ошибки QFontDatabase: Cannot find font directory ---
+# Для PyQt5/Qt5: добавляем переменную окружения QT_QPA_FONTDIR с путем к шрифтам
+os.environ["QT_QPA_FONTDIR"] = os.path.abspath("fonts")
+
 # Try to import PyQt5, but continue if not available (headless mode)
 try:
     from PyQt5.QtWidgets import QApplication
