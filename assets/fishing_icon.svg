@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Fishing icon -->
+  <path d="M12,4 L14,2 L12,1 L13,4 Z" fill="#FF9800" />
+  <path d="M13,4 Q17,5 19,9 Q20,11 19,14" stroke="#FF9800" stroke-width="1.5" fill="none" />
+  <path d="M19,14 Q17,15 14,15" stroke="#FF9800" stroke-width="1.5" fill="none" />
+  <path d="M14,15 Q12,16 10,18 L12,20 L14,18 L12,16 Z" stroke="#2196F3" stroke-width="1.5" fill="none" />
+  <path d="M12,20 L12,23" stroke="#2196F3" stroke-width="1.5" fill="none" />
+  <path d="M12,23 C11,23 11,24 12,24" stroke="#2196F3" stroke-width="1.5" fill="none" />
+  
+  <!-- Fish -->
+  <path d="M4,16 Q3,13 4,10 Q6,8 8,8 Q12,8 14,12 Q12,16 8,16 Q6,16 4,16 Z" fill="#64B5F6" />
+  <ellipse cx="7" cy="11" rx="1" ry="1" fill="#0D47A1" />
+  <path d="M14,12 L16,14" stroke="#64B5F6" stroke-width="1.5" />
+  <path d="M14,12 L16,10" stroke="#64B5F6" stroke-width="1.5" />
+</svg>

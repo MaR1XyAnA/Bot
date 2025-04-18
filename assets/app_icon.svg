@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Fishing Bot Icon -->
+  <circle cx="32" cy="32" r="30" fill="#2196F3" />
+  <circle cx="32" cy="32" r="26" fill="#1565C0" />
+  
+  <!-- Bot Face -->
+  <circle cx="24" cy="24" r="5" fill="#FFFFFF" />
+  <circle cx="40" cy="24" r="5" fill="#FFFFFF" />
+  <circle cx="24" cy="24" r="2" fill="#000000" />
+  <circle cx="40" cy="24" r="2" fill="#000000" />
+  
+  <!-- Smile -->
+  <path d="M20,36 Q32,46 44,36" stroke="#FFFFFF" stroke-width="3" fill="none" />
+  
+  <!-- Fishing Rod -->
+  <path d="M48,8 L58,5 L54,15 L48,8 Z" fill="#FF9800" />
+  <path d="M48,8 Q40,16 36,28 Q34,33 30,36" stroke="#FF9800" stroke-width="2" fill="none" />
+  
+  <!-- Fishing Line -->
+  <path d="M30,36 Q28,42 28,48 L32,52 L36,48 L32,44 Z" stroke="#FFFFFF" stroke-width="1" fill="none" />
+  <path d="M32,52 L32,58" stroke="#FFFFFF" stroke-width="1" fill="none" />
+  
+  <!-- Hook -->
+  <path d="M32,58 C30,58 30,60 32,60" stroke="#FFFFFF" stroke-width="1" fill="none" />
+</svg>

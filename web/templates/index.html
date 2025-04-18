@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fishing Bot - Веб-интерфейс</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body data-bs-theme="dark">
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">Рыболовный Бот</h1>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title">Статус</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <p class="status-label">Статус: <span id="status-value" class="badge bg-secondary">Загрузка...</span></p>
+                            </div>
+                            <div>
+                                <button id="start-btn" class="btn btn-success">Запустить</button>
+                                <button id="stop-btn" class="btn btn-danger">Остановить</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title">Управление</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="cast-interval" class="form-label">Интервал заброса (сек):</label>
+                                    <input type="range" class="form-range" id="cast-interval" min="5" max="300" value="30">
+                                    <div class="d-flex justify-content-between">
+                                        <span>5</span>
+                                        <span id="cast-interval-value">30</span>
+                                        <span>300</span>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="detection-method" class="form-label">Метод определения:</label>
+                                    <select class="form-select" id="detection-method">
+                                        <option value="color">Цвет</option>
+                                        <option value="motion">Движение</option>
+                                        <option value="sound">Звук</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sensitivity" class="form-label">Чувствительность:</label>
+                                    <input type="range" class="form-range" id="sensitivity" min="0" max="100" value="50">
+                                    <div class="d-flex justify-content-between">
+                                        <span>0%</span>
+                                        <span id="sensitivity-value">50%</span>
+                                        <span>100%</span>
+                                    </div>
+                                </div>
+                                <button id="save-settings-btn" class="btn btn-primary">Сохранить настройки</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title">Статистика</h5>
+                            </div>
+                            <div class="card-body">
+                                <p id="session-time">Время сессии: 00:00:00</p>
+                                <p id="fish-caught">Поймано рыбы: 0</p>
+                                <p id="fish-per-hour">Рыбы в час: 0</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title">Информация</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>Версия: <span id="version">1.0.0</span></p>
+                                <p>Репозиторий GitHub: <a href="#" id="repo-link">username/fishing-bot</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title">Журнал активности</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="log-container">
+                            <pre id="log-output" class="form-control"></pre>
+                        </div>
+                        <button id="clear-log-btn" class="btn btn-secondary mt-2">Очистить журнал</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
