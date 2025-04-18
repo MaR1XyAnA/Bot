@@ -146,9 +146,15 @@ class FishingBotApp(QWidget):
                 with tempfile.TemporaryDirectory() as tmpdir:
                     with zipfile.ZipFile(tmpfile_path, 'r') as zip_ref:
                         zip_ref.extractall(tmpdir)
-                    # Копируем файлы из архива в текущую папку
-                    for root, dirs, files in os.walk(tmpdir):
-                        rel_path = os.path.relpath(root, tmpdir)
+                    # Найти папку верхнего уровня (например, Bot)
+                    top_dirs = [d for d in os.listdir(tmpdir) if os.path.isdir(os.path.join(tmpdir, d))]
+                    if not top_dirs:
+                        self.log_text.append("Ошибка: не найдена папка проекта в архиве.")
+                        return
+                    project_dir = os.path.join(tmpdir, top_dirs[0])
+                    # Копируем только содержимое папки проекта
+                    for root, dirs, files in os.walk(project_dir):
+                        rel_path = os.path.relpath(root, project_dir)
                         dest_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
                         os.makedirs(dest_dir, exist_ok=True)
                         for file in files:
