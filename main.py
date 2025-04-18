@@ -12,9 +12,11 @@ def check_for_update():
     """
     Проверяет наличие новой версии на GitHub и обновляет файлы без использования git.
     """
-    repo = "MaR1XyAnA/Bot"
+    # Используем ссылку на репозиторий, но для автообновления нужен API releases/latest
+    repo_url = "https://github.com/MaR1XyAnA/Bot.git"
+    api_url = "https://api.github.com/repos/MaR1XyAnA/Bot/releases/latest"
     try:
-        response = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", timeout=5)
+        response = requests.get(api_url, timeout=5)
         if response.status_code == 404:
             print("В репозитории нет опубликованных релизов. Автообновление невозможно.")
             print("Создайте опубликованный релиз (Release) на GitHub, чтобы включить автообновление.")
@@ -54,6 +56,7 @@ def check_for_update():
     except Exception as e:
         print(f"Ошибка при автообновлении: {e}")
 
+# Проверка обновлений при запуске
 check_for_update()
 
 running = False
