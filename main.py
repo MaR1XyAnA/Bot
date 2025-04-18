@@ -6,14 +6,13 @@ import requests
 import zipfile
 import io
 
-current_version = "v1.1.3"  # Обновляйте вручную при релизе
+current_version = "v1.0.0"  # Обновляйте вручную при релизе
 
 def check_for_update():
     """
     Проверяет наличие новой версии на GitHub и обновляет файлы без использования git.
+    После обновления автоматически перезапускает приложение.
     """
-# Используем ссылку на репозиторий, но для автообновления нужен API releases/latest
-    repo_url = "https://github.com/MaR1XyAnA/Bot.git"
     api_url = "https://api.github.com/repos/MaR1XyAnA/Bot/releases/latest"
     try:
         response = requests.get(api_url, timeout=5)
@@ -48,9 +47,10 @@ def check_for_update():
                 os.makedirs(os.path.dirname(target_path), exist_ok=True)
                 with open(target_path, "wb") as f:
                     f.write(z.read(member))
-            print("Обновление завершено. Перезапустите программу для применения изменений.")
-            messagebox.showinfo("Обновление", f"Доступна новая версия: {latest_version}.\nОбновление завершено.\nПерезапустите программу.")
-            sys.exit(0)
+            print("Обновление завершено. Перезапускаем программу для применения изменений.")
+            messagebox.showinfo("Обновление", f"Доступна новая версия: {latest_version}.\nОбновление завершено.\nПрограмма будет перезапущена.")
+            python = sys.executable
+            os.execl(python, python, *sys.argv)
         else:
             print("Установлена последняя версия.")
     except Exception as e:
