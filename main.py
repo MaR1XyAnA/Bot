@@ -18,9 +18,9 @@ def check_for_update():
     """
     Проверяет наличие новой версии на GitHub и скачивает её, если доступна.
     """
-    repo = "user/repo"  # Замените на свой репозиторий, например: MaR1XyAnA/Bot
+    repo = "MaR1XyAnA/Bot"  # Укажите свой репозиторий
     try:
-        latest = requests.get(f"https://github.com/MaR1XyAnA/Bot/releases/tag/Bot", timeout=5).json()
+        latest = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", timeout=5).json()
         latest_version = latest["tag_name"]
         if latest_version != current_version:
             url = latest["assets"][0]["browser_download_url"]
