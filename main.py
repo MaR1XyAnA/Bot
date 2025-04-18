@@ -6,13 +6,13 @@ import requests
 import zipfile
 import io
 
-current_version = "v1.0.0"  # Обновляйте вручную при релизе
+current_version = "v1.1.3"  # Обновляйте вручную при релизе
 
 def check_for_update():
     """
     Проверяет наличие новой версии на GitHub и обновляет файлы без использования git.
     """
-    # Используем ссылку на репозиторий, но для автообновления нужен API releases/latest
+# Используем ссылку на репозиторий, но для автообновления нужен API releases/latest
     repo_url = "https://github.com/MaR1XyAnA/Bot.git"
     api_url = "https://api.github.com/repos/MaR1XyAnA/Bot/releases/latest"
     try:
@@ -56,7 +56,6 @@ def check_for_update():
     except Exception as e:
         print(f"Ошибка при автообновлении: {e}")
 
-# Проверка обновлений при запуске
 check_for_update()
 
 running = False
