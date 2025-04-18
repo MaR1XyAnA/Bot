@@ -8,6 +8,38 @@ from PIL import ImageGrab  # Для захвата экрана
 import cv2  # Для обработки изображений
 import numpy as np  # Для работы с массивами
 import os  # Для работы с файловой системой
+import sys
+import requests  # Для автообновления
+
+# Текущая версия скрипта
+current_version = "v1.0.0"  # Обновляйте вручную при релизе
+
+def check_for_update():
+    """
+    Проверяет наличие новой версии на GitHub и скачивает её, если доступна.
+    """
+    repo = "user/repo"  # Замените на свой репозиторий, например: MaR1XyAnA/Bot
+    try:
+        latest = requests.get(f"https://github.com/MaR1XyAnA/Bot/releases/tag/Bot", timeout=5).json()
+        latest_version = latest["tag_name"]
+        if latest_version != current_version:
+            url = latest["assets"][0]["browser_download_url"]
+            print(f"Доступна новая версия: {latest_version}. Скачиваем обновление...")
+            response = requests.get(url, stream=True)
+            filename = os.path.basename(url)
+            with open(filename, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            print(f"Обновление скачано: {filename}. Замените текущий файл на новую версию и перезапустите программу.")
+            messagebox.showinfo("Обновление", f"Доступна новая версия: {latest_version}.\nСкачан файл: {filename}\nЗамените текущий файл и перезапустите программу.")
+            sys.exit(0)
+        else:
+            print("Установлена последняя версия.")
+    except Exception as e:
+        print(f"Ошибка при проверке обновлений: {e}")
+
+# Проверка обновлений при запуске
+check_for_update()
 
 class FishingBot:
     def __init__(self):
