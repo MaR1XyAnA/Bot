@@ -108,7 +108,7 @@ class FishingBotApp(QWidget):
         self.log_text.append("Открыто окно настроек (в разработке).")
 
     def update_from_github(self):
-        current_version = "v1.0.0"  # Укажите актуальную версию вашего приложения
+        current_version = "v1.0.3"  # Укажите актуальную версию вашего приложения
         repo_api = "https://api.github.com/repos/MaR1XyAnA/Bot/releases/latest"
         self.log_text.append("Проверка обновлений через GitHub Releases...")
         try:
