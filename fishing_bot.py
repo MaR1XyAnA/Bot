@@ -7,6 +7,7 @@ class FishingBot:
         self._running = False
         self._thread = None
         self.log_callback = log_callback or (lambda msg: None)
+        self.fish_count = 0  # Новый атрибут для подсчёта рыбы
 
     def start(self):
         if self._running:
@@ -27,7 +28,8 @@ class FishingBot:
     def _run(self):
         while self._running:
             # Здесь должна быть логика рыбалки
-            self.log_callback("Бот ловит рыбу...")
+            self.fish_count += 1  # Увеличиваем счётчик
+            self.log_callback(f"Бот ловит рыбу... Всего поймано: {self.fish_count}")
 
             # Пример использования OpenCV: попытка загрузить изображение
             try:
