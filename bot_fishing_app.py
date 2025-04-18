@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import requests
 import zipfile
+import traceback  # Добавлено для вывода ошибок
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QHBoxLayout, QFrame, QSizePolicy
 )
@@ -160,14 +161,20 @@ class FishingBotApp(QWidget):
                         for file in files:
                             src_file = os.path.join(root, file)
                             dst_file = os.path.join(dest_dir, file)
+                            # Не копируем текущий исполняемый файл
+                            if os.path.abspath(dst_file) == os.path.abspath(__file__):
+                                self.log_text.append(f"Пропущен файл (исполняемый): {file}")
+                                continue
                             shutil.copy2(src_file, dst_file)
-                self.log_text.append("Обновление завершено. Перезапустите приложение.")
+                self.log_text.append("Обновление завершено. Для полной установки обновления перезапустите приложение вручную.")
             except Exception as e:
                 self.log_text.append(f"Ошибка при распаковке или копировании файлов: {e}")
+                self.log_text.append(traceback.format_exc())
             finally:
                 os.remove(tmpfile_path)
         except Exception as e:
             self.log_text.append(f"Ошибка обновления: {e}")
+            self.log_text.append(traceback.format_exc())
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
