@@ -32,25 +32,30 @@ def check_for_update():
             if not zip_url:
                 print("Ошибка: Не найден zip-архив для релиза.")
                 return
-            r = requests.get(zip_url, stream=True)
-            if r.status_code != 200:
-                print("Ошибка при скачивании архива:", r.status_code)
+            try:
+                r = requests.get(zip_url, stream=True, timeout=10)
+                if r.status_code != 200:
+                    print("Ошибка при скачивании архива:", r.status_code)
+                    return
+                z = zipfile.ZipFile(io.BytesIO(r.content))
+                for member in z.namelist():
+                    if member.endswith('/'):
+                        continue
+                    filename = os.path.relpath(member, start=z.namelist()[0])
+                    if filename == ".":
+                        continue
+                    target_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                    with open(target_path, "wb") as f:
+                        f.write(z.read(member))
+                print("Обновление завершено. Перезапускаем программу для применения изменений.")
+                messagebox.showinfo("Обновление", f"Доступна новая версия: {latest_version}.\nОбновление завершено.\nПрограмма будет перезапущена.")
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            except requests.exceptions.RequestException as e:
+                print("Ошибка сети при скачивании архива:", e)
+                messagebox.showerror("Ошибка обновления", f"Ошибка сети при скачивании архива:\n{e}\nПроверьте подключение к интернету и повторите попытку.")
                 return
-            z = zipfile.ZipFile(io.BytesIO(r.content))
-            for member in z.namelist():
-                if member.endswith('/'):
-                    continue
-                filename = os.path.relpath(member, start=z.namelist()[0])
-                if filename == ".":
-                    continue
-                target_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
-                os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                with open(target_path, "wb") as f:
-                    f.write(z.read(member))
-            print("Обновление завершено. Перезапускаем программу для применения изменений.")
-            messagebox.showinfo("Обновление", f"Доступна новая версия: {latest_version}.\nОбновление завершено.\nПрограмма будет перезапущена.")
-            python = sys.executable
-            os.execl(python, python, *sys.argv)
         else:
             print("Установлена последняя версия.")
     except Exception as e:
