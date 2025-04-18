@@ -10,40 +10,61 @@ import numpy as np  # Для работы с массивами
 import os  # Для работы с файловой системой
 import sys
 import requests  # Для автообновления
+import zipfile
+import io
 
 # Текущая версия скрипта
 current_version = "v1.0.0"  # Обновляйте вручную при релизе
 
 def check_for_update():
     """
-    Проверяет наличие новой версии на GitHub и обновляет файлы через git, если доступна.
+    Проверяет наличие новой версии на GitHub и обновляет файлы без использования git.
     """
-    repo_url = "https://github.com/MaR1XyAnA/Bot.git"
-    local_dir = os.path.dirname(os.path.abspath(__file__))
+    repo = "MaR1XyAnA/Bot"
     try:
-        # Проверяем, установлен ли git
-        if os.system("git --version") != 0:
-            print("Git не установлен. Автообновление невозможно.")
+        response = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", timeout=5)
+        if response.status_code == 404:
+            print("В репозитории нет опубликованных релизов. Автообновление невозможно.")
+            print("Создайте опубликованный релиз (Release) на GitHub, чтобы включить автообновление.")
             return
-
-        # Если директория .git есть, делаем pull, иначе clone
-        if os.path.exists(os.path.join(local_dir, ".git")):
-            print("Проверяем обновления через git pull...")
-            res = os.system(f'git -C "{local_dir}" pull')
-            if res == 0:
-                print("Обновление завершено. Перезапустите программу для применения изменений.")
-            else:
-                print("Ошибка при выполнении git pull.")
+        latest = response.json()
+        if "tag_name" not in latest:
+            print("Ошибка: Не удалось получить информацию о релизе.")
+            print("Ответ GitHub API:", latest)
+            return
+        latest_version = latest["tag_name"]
+        if latest_version != current_version:
+            print(f"Доступна новая версия: {latest_version}. Скачиваем и обновляем файлы...")
+            # Скачиваем zip-архив исходников с релиза
+            zip_url = latest.get("zipball_url")
+            if not zip_url:
+                print("Ошибка: Не найден zip-архив для релиза.")
+                return
+            r = requests.get(zip_url, stream=True)
+            if r.status_code != 200:
+                print("Ошибка при скачивании архива:", r.status_code)
+                return
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            # Распаковываем архив в текущую директорию поверх файлов
+            for member in z.namelist():
+                # Пропускаем директории
+                if member.endswith('/'):
+                    continue
+                # Извлекаем только содержимое архива (без корневой папки)
+                filename = os.path.relpath(member, start=z.namelist()[0])
+                if filename == ".":
+                    continue
+                target_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+                os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                with open(target_path, "wb") as f:
+                    f.write(z.read(member))
+            print("Обновление завершено. Перезапустите программу для применения изменений.")
+            messagebox.showinfo("Обновление", f"Доступна новая версия: {latest_version}.\nОбновление завершено.\nПерезапустите программу.")
+            sys.exit(0)
         else:
-            print("Клонируем репозиторий заново...")
-            res = os.system(f'git clone "{repo_url}" "{local_dir}"')
-            if res == 0:
-                print("Репозиторий успешно склонирован. Перезапустите программу.")
-            else:
-                print("Ошибка при выполнении git clone.")
-        # Можно добавить messagebox, если нужно GUI-уведомление
+            print("Установлена последняя версия.")
     except Exception as e:
-        print(f"Ошибка при автообновлении через git: {e}")
+        print(f"Ошибка при автообновлении: {e}")
 
 # Проверка обновлений при запуске
 check_for_update()
