@@ -150,12 +150,7 @@ class Controller(QtCore.QObject):
         """Автоматическая проверка обновлений при старте"""
         if self.updater.check_for_updates():
             print(f"[Обновление] Доступна новая версия: {self.updater.latest_version}")
-            QtCore.QMetaObject.invokeMethod(
-                self, 
-                'show_update_notification', 
-                QtCore.Qt.QueuedConnection,
-                QtCore.Q_ARG(str, self.updater.latest_version)
-            )
+            self.show_update_notification(self.updater.latest_version)
         else:
             print("[Обновление] У вас актуальная версия")
 
@@ -183,6 +178,7 @@ class Controller(QtCore.QObject):
 
         threading.Thread(target=update_check, daemon=True).start()
 
+    @QtCore.pyqtSlot(str)
     def show_update_notification(self, new_version):
         """Показывает уведомление о доступном обновлении"""
         reply = QtWidgets.QMessageBox.question(
