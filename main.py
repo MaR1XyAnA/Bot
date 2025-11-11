@@ -8,7 +8,16 @@ from PyQt5 import QtWidgets, QtCore
 from ui import MajesticBotWindow, SettingsWindow
 from bots import oranges, lumberjack, mine, quarry, captcha, mushrooms
 import threading
-import subprocess
+
+
+class UpdateSignal(QtCore.QObject):
+    """Сигналы для обновления UI из потоков"""
+    update_available = QtCore.pyqtSignal(str)
+    update_error = QtCore.pyqtSignal(str)
+    no_updates = QtCore.pyqtSignal()
+    update_progress = QtCore.pyqtSignal()
+    update_success = QtCore.pyqtSignal()
+    update_failed = QtCore.pyqtSignal()
 
 
 class Updater:
@@ -30,70 +39,59 @@ class Updater:
                 self.update_url = data['zipball_url']
                 return self.latest_version != self.current_version
             return False
-        except requests.exceptions.RequestException as e:
-            print(f"[Ошибка проверки обновлений]: Сетевая ошибка - {e}")
-            return False
         except Exception as e:
             print(f"[Ошибка проверки обновлений]: {e}")
             return False
 
-    def download_and_install_update(self, progress_callback=None):
+    def download_and_install_update(self):
         """Скачивает и устанавливает обновление"""
         try:
             if not self.update_url:
-                print("[Ошибка обновления] URL обновления не найден")
                 return False
 
+            # Создаем временную директорию
             temp_dir = tempfile.mkdtemp()
             zip_path = os.path.join(temp_dir, "update.zip")
             
+            # Скачиваем архив
             print(f"[Обновление] Скачивание обновления {self.latest_version}...")
-            response = requests.get(self.update_url, stream=True, timeout=60)
-            response.raise_for_status()
-            
-            total_size = int(response.headers.get('content-length', 0))
-            downloaded = 0
-            
+            response = requests.get(self.update_url, stream=True, timeout=30)
             with open(zip_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if progress_callback and total_size:
-                            progress = int((downloaded / total_size) * 100)
-                            progress_callback(progress)
+                    f.write(chunk)
 
-            print("[Обновление] Распаковка архива...")
+            # Распаковываем архив
             extract_dir = os.path.join(temp_dir, "extracted")
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
 
+            # Находим корневую директорию распакованного содержимого
             extracted_items = os.listdir(extract_dir)
             if len(extracted_items) == 1:
                 update_src_dir = os.path.join(extract_dir, extracted_items[0])
             else:
                 update_src_dir = extract_dir
 
-            print("[Обновление] Копирование файлов...")
+            # Копируем файлы обновления (кроме настроек)
             self._copy_update_files(update_src_dir, os.getcwd())
             
+            # Очищаем временные файлы
             shutil.rmtree(temp_dir)
+            
             print("[Обновление] Обновление успешно установлено!")
             return True
             
-        except requests.exceptions.RequestException as e:
-            print(f"[Ошибка обновления] Ошибка загрузки: {e}")
-            return False
         except Exception as e:
             print(f"[Ошибка обновления]: {e}")
             return False
 
     def _copy_update_files(self, src_dir, dest_dir):
         """Копирует файлы обновления, исключая конфигурационные файлы"""
-        exclude_files = {'settings.ini', 'config.json', '.gitignore'}
-        exclude_dirs = {'.git', '__pycache__', 'logs', '.github'}
+        exclude_files = {'settings.ini', 'config.json'}  # Файлы которые не должны обновляться
+        exclude_dirs = {'.git', '__pycache__', 'logs'}   # Директории которые не должны обновляться
         
         for root, dirs, files in os.walk(src_dir):
+            # Исключаем директории
             dirs[:] = [d for d in dirs if d not in exclude_dirs]
             
             for file in files:
@@ -104,29 +102,35 @@ class Updater:
                 rel_path = os.path.relpath(src_file, src_dir)
                 dest_file = os.path.join(dest_dir, rel_path)
                 
-                try:
-                    os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-                    shutil.copy2(src_file, dest_file)
-                    print(f"[Обновление] Обновлен: {rel_path}")
-                except Exception as e:
-                    print(f"[Ошибка копирования] {rel_path}: {e}")
+                # Создаем директории если нужно
+                os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+                
+                # Копируем файл
+                shutil.copy2(src_file, dest_file)
+                print(f"[Обновление] Обновлен: {rel_path}")
 
 
-class Controller(QtCore.QObject):
-    update_check_done = QtCore.pyqtSignal(bool, str)
-    
+class Controller:
     def __init__(self):
-        super().__init__()
-        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+        self.app = QtWidgets.QApplication(sys.argv)
         self.main_window = MajesticBotWindow()
         self.settings_window = None
-        self.bot_threads = {}
-        self.bot_stop_flags = {}
+        self.bot_threads = {}  # Для потоков ботов
+        self.bot_stop_flags = {}  # Для остановки ботов
+        
+        # Инициализация системы обновлений с сигналами
+        self.update_signal = UpdateSignal()
+        self.update_signal.update_available.connect(self.show_update_notification)
+        self.update_signal.update_error.connect(self.show_update_error)
+        self.update_signal.no_updates.connect(self.show_no_updates_message)
+        self.update_signal.update_progress.connect(self.show_progress_dialog)
+        self.update_signal.update_success.connect(self.show_restart_message)
+        self.update_signal.update_failed.connect(self.show_update_failed_message)
         
         self.updater = Updater(
-            repo_owner="MaR1XyAnA",
-            repo_name="Bot",
-            current_version="1.0.0"
+            repo_owner="MaR1XyAnA",  # Ваше имя пользователя GitHub
+            repo_name="Bot",         # Название вашего репозитория
+            current_version="1.0.0"  # Текущая версия приложения
         )
         
         self.connect_signals()
@@ -139,6 +143,7 @@ class Controller(QtCore.QObject):
                 button.clicked.connect(lambda _, a=action: self.run_bot(a))
         self.main_window.settings_btn.clicked.connect(self.open_settings)
         
+        # Добавляем кнопку проверки обновлений если она есть в UI
         if hasattr(self.main_window, 'update_btn'):
             self.main_window.update_btn.clicked.connect(self.check_for_updates)
 
@@ -148,35 +153,38 @@ class Controller(QtCore.QObject):
 
     def _auto_check_updates(self):
         """Автоматическая проверка обновлений при старте"""
-        if self.updater.check_for_updates():
-            print(f"[Обновление] Доступна новая версия: {self.updater.latest_version}")
-            self.show_update_notification(self.updater.latest_version)
-        else:
-            print("[Обновление] У вас актуальная версия")
+        try:
+            if self.updater.check_for_updates():
+                print(f"[Обновление] Доступна новая версия: {self.updater.latest_version}")
+                # Используем сигнал для уведомления главного потока
+                self.update_signal.update_available.emit(self.updater.latest_version)
+            else:
+                print("[Обновление] У вас актуальная версия")
+        except Exception as e:
+            print(f"[Ошибка автообновления]: {e}")
 
     def check_for_updates(self):
         """Ручная проверка обновлений"""
         def update_check():
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             try:
                 if self.updater.check_for_updates():
-                    self.show_update_dialog(self.updater.latest_version)
+                    # Используем сигнал для показа диалога в главном потоке
+                    self.update_signal.update_available.emit(self.updater.latest_version)
                 else:
-                    QtWidgets.QMessageBox.information(
-                        self.main_window, 
-                        "Проверка обновлений", 
-                        "У вас актуальная версия программы!"
-                    )
+                    self.update_signal.no_updates.emit()
             except Exception as e:
-                QtWidgets.QMessageBox.warning(
-                    self.main_window, 
-                    "Ошибка", 
-                    f"Не удалось проверить обновления: {e}"
-                )
-            finally:
-                QtWidgets.QApplication.restoreOverrideCursor()
+                self.update_signal.update_error.emit(str(e))
 
         threading.Thread(target=update_check, daemon=True).start()
+
+    @QtCore.pyqtSlot()
+    def show_no_updates_message(self):
+        """Показывает сообщение об отсутствии обновлений"""
+        QtWidgets.QMessageBox.information(
+            self.main_window, 
+            "Проверка обновлений", 
+            "У вас актуальная версия программы!"
+        )
 
     @QtCore.pyqtSlot(str)
     def show_update_notification(self, new_version):
@@ -192,71 +200,68 @@ class Controller(QtCore.QObject):
         if reply == QtWidgets.QMessageBox.Yes:
             self.install_update()
 
-    def show_update_dialog(self, new_version):
-        """Показывает диалог обновления"""
-        reply = QtWidgets.QMessageBox.question(
+    @QtCore.pyqtSlot(str)
+    def show_update_error(self, error_message):
+        """Показывает ошибку обновления"""
+        QtWidgets.QMessageBox.warning(
             self.main_window,
-            "Обновление доступно",
-            f"Найдена новая версия: {new_version}\n\nУстановить обновление?",
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-            QtWidgets.QMessageBox.Yes
+            "Ошибка обновления",
+            f"Произошла ошибка при проверке обновлений: {error_message}"
         )
-        
-        if reply == QtWidgets.QMessageBox.Yes:
-            self.install_update()
 
     def install_update(self):
         """Устанавливает обновление"""
         def install_thread():
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            progress = None
             try:
-                progress = QtWidgets.QProgressDialog(
-                    "Установка обновления...", "Отмена", 0, 100, self.main_window
-                )
-                progress.setWindowTitle("Обновление")
-                progress.setWindowModality(QtCore.Qt.WindowModal)
-                progress.show()
+                self.update_signal.update_progress.emit()
                 
-                def update_progress(value):
-                    progress.setValue(value)
-                    QtWidgets.QApplication.processEvents()
-                
-                if self.updater.download_and_install_update(progress_callback=update_progress):
-                    if progress:
-                        progress.close()
-                    QtWidgets.QMessageBox.information(
-                        self.main_window,
-                        "Обновление завершено",
-                        "Обновление успешно установлено! Программа будет перезапущена."
-                    )
-                    self.restart_application()
+                if self.updater.download_and_install_update():
+                    self.update_signal.update_success.emit()
                 else:
-                    if progress:
-                        progress.close()
-                    QtWidgets.QMessageBox.warning(
-                        self.main_window,
-                        "Ошибка",
-                        "Не удалось установить обновление. Попробуйте позже."
-                    )
+                    self.update_signal.update_failed.emit()
                     
             except Exception as e:
-                if progress:
-                    progress.close()
-                QtWidgets.QMessageBox.warning(
-                    self.main_window,
-                    "Ошибка",
-                    f"Ошибка при установке обновления: {e}"
-                )
-            finally:
-                QtWidgets.QApplication.restoreOverrideCursor()
+                self.update_signal.update_error.emit(str(e))
 
         threading.Thread(target=install_thread, daemon=True).start()
 
+    @QtCore.pyqtSlot()
+    def show_progress_dialog(self):
+        """Показывает диалог прогресса обновления"""
+        self.progress = QtWidgets.QProgressDialog("Установка обновления...", "Отмена", 0, 0, self.main_window)
+        self.progress.setWindowTitle("Обновление")
+        self.progress.setWindowModality(QtCore.Qt.WindowModal)
+        self.progress.show()
+
+    @QtCore.pyqtSlot()
+    def show_restart_message(self):
+        """Показывает сообщение о перезапуске"""
+        if hasattr(self, 'progress'):
+            self.progress.close()
+        reply = QtWidgets.QMessageBox.information(
+            self.main_window,
+            "Обновление завершено",
+            "Обновление успешно установлено! Программа будет перезапущена.",
+            QtWidgets.QMessageBox.Ok
+        )
+        if reply == QtWidgets.QMessageBox.Ok:
+            self.restart_application()
+
+    @QtCore.pyqtSlot()
+    def show_update_failed_message(self):
+        """Показывает сообщение об ошибке обновления"""
+        if hasattr(self, 'progress'):
+            self.progress.close()
+        QtWidgets.QMessageBox.warning(
+            self.main_window,
+            "Ошибка",
+            "Не удалось установить обновление. Попробуйте позже."
+        )
+
     def restart_application(self):
         """Перезапускает приложение"""
-        subprocess.Popen([sys.executable] + sys.argv)
-        self.app.quit()
+        QtWidgets.QApplication.quit()
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def run_bot(self, bot_name):
         bots_map = {
@@ -267,6 +272,7 @@ class Controller(QtCore.QObject):
             "captcha": captcha,
             "mushrooms": mushrooms,
         }
+        # Если бот уже запущен — останавливаем
         if bot_name in self.bot_threads and self.bot_threads[bot_name].is_alive():
             print(f"[INFO] Остановка бота: {bot_name}")
             self.bot_stop_flags[bot_name] = True
@@ -308,6 +314,7 @@ class Controller(QtCore.QObject):
         key = self.settings_window.key_input.text()
         print(f"[Настройки сохранены] Задержка: {delay}s | Клавиша: {key}")
         QtWidgets.QMessageBox.information(self.settings_window, "Сохранено", "Настройки успешно сохранены!")
+        # Сохраняем настройки в файл
         try:
             with open("settings.ini", "w", encoding="utf-8") as f:
                 f.write(f"delay={delay}\n")
@@ -318,6 +325,7 @@ class Controller(QtCore.QObject):
     def open_settings(self):
         if not self.settings_window or not self.settings_window.isVisible():
             self.settings_window = SettingsWindow()
+            # Загружаем настройки из файла
             try:
                 with open("settings.ini", "r", encoding="utf-8") as f:
                     for line in f:
@@ -326,7 +334,7 @@ class Controller(QtCore.QObject):
                         elif line.startswith("key="):
                             self.settings_window.key_input.setText(line.strip().split("=", 1)[1])
             except FileNotFoundError:
-                pass
+                pass  # Файл настроек еще не создан
             self.settings_window.save_btn.clicked.connect(self.save_settings)
             self.settings_window.show()
         else:
