@@ -10,16 +10,6 @@ from bots import oranges, lumberjack, mine, quarry, captcha, mushrooms
 import threading
 
 
-class UpdateSignal(QtCore.QObject):
-    """Сигналы для обновления UI из потоков"""
-    update_available = QtCore.pyqtSignal(str)
-    update_error = QtCore.pyqtSignal(str)
-    no_updates = QtCore.pyqtSignal()
-    update_progress = QtCore.pyqtSignal()
-    update_success = QtCore.pyqtSignal()
-    update_failed = QtCore.pyqtSignal()
-
-
 class Updater:
     def __init__(self, repo_owner, repo_name, current_version):
         self.repo_owner = repo_owner
@@ -118,23 +108,20 @@ class Controller:
         self.bot_threads = {}  # Для потоков ботов
         self.bot_stop_flags = {}  # Для остановки ботов
         
-        # Инициализация системы обновлений с сигналами
-        self.update_signal = UpdateSignal()
-        self.update_signal.update_available.connect(self.show_update_notification)
-        self.update_signal.update_error.connect(self.show_update_error)
-        self.update_signal.no_updates.connect(self.show_no_updates_message)
-        self.update_signal.update_progress.connect(self.show_progress_dialog)
-        self.update_signal.update_success.connect(self.show_restart_message)
-        self.update_signal.update_failed.connect(self.show_update_failed_message)
-        
+        # Инициализация системы обновлений
         self.updater = Updater(
             repo_owner="MaR1XyAnA",  # Ваше имя пользователя GitHub
             repo_name="Bot",         # Название вашего репозитория
             current_version="1.0.0"  # Текущая версия приложения
         )
         
+        # Флаг для отслеживания статуса обновления
+        self.update_in_progress = False
+        
         self.connect_signals()
-        self.check_updates_on_start()
+        
+        # Запускаем проверку обновлений через небольшой таймаут, чтобы UI успел загрузиться
+        QtCore.QTimer.singleShot(1000, self.check_updates_on_start)
 
     def connect_signals(self):
         for button in self.main_window.findChildren(QtWidgets.QPushButton):
@@ -145,39 +132,41 @@ class Controller:
         
         # Добавляем кнопку проверки обновлений если она есть в UI
         if hasattr(self.main_window, 'update_btn'):
-            self.main_window.update_btn.clicked.connect(self.check_for_updates)
+            self.main_window.update_btn.clicked.connect(self.check_for_updates_manual)
 
     def check_updates_on_start(self):
         """Проверяет обновления при запуске приложения"""
-        threading.Thread(target=self._auto_check_updates, daemon=True).start()
+        if not self.update_in_progress:
+            threading.Thread(target=self._auto_check_updates, daemon=True).start()
 
     def _auto_check_updates(self):
         """Автоматическая проверка обновлений при старте"""
         try:
             if self.updater.check_for_updates():
                 print(f"[Обновление] Доступна новая версия: {self.updater.latest_version}")
-                # Используем сигнал для уведомления главного потока
-                self.update_signal.update_available.emit(self.updater.latest_version)
+                # Используем QTimer для вызова в главном потоке
+                QtCore.QTimer.singleShot(0, lambda: self.show_update_notification(self.updater.latest_version, auto=True))
             else:
                 print("[Обновление] У вас актуальная версия")
         except Exception as e:
             print(f"[Ошибка автообновления]: {e}")
 
-    def check_for_updates(self):
+    def check_for_updates_manual(self):
         """Ручная проверка обновлений"""
+        if self.update_in_progress:
+            return
+            
         def update_check():
             try:
                 if self.updater.check_for_updates():
-                    # Используем сигнал для показа диалога в главном потоке
-                    self.update_signal.update_available.emit(self.updater.latest_version)
+                    QtCore.QTimer.singleShot(0, lambda: self.show_update_dialog(self.updater.latest_version))
                 else:
-                    self.update_signal.no_updates.emit()
+                    QtCore.QTimer.singleShot(0, self.show_no_updates_message)
             except Exception as e:
-                self.update_signal.update_error.emit(str(e))
+                QtCore.QTimer.singleShot(0, lambda: self.show_update_error(str(e)))
 
         threading.Thread(target=update_check, daemon=True).start()
 
-    @QtCore.pyqtSlot()
     def show_no_updates_message(self):
         """Показывает сообщение об отсутствии обновлений"""
         QtWidgets.QMessageBox.information(
@@ -186,13 +175,15 @@ class Controller:
             "У вас актуальная версия программы!"
         )
 
-    @QtCore.pyqtSlot(str)
-    def show_update_notification(self, new_version):
+    def show_update_notification(self, new_version, auto=False):
         """Показывает уведомление о доступном обновлении"""
+        title = "Доступно обновление" if auto else "Обновление доступно"
+        message = f"Доступна новая версия {new_version}. Хотите обновить программу сейчас?"
+        
         reply = QtWidgets.QMessageBox.question(
             self.main_window,
-            "Доступно обновление",
-            f"Доступна новая версия {new_version}. Хотите обновить программу сейчас?",
+            title,
+            message,
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
             QtWidgets.QMessageBox.Yes
         )
@@ -200,7 +191,10 @@ class Controller:
         if reply == QtWidgets.QMessageBox.Yes:
             self.install_update()
 
-    @QtCore.pyqtSlot(str)
+    def show_update_dialog(self, new_version):
+        """Показывает диалог обновления"""
+        self.show_update_notification(new_version, auto=False)
+
     def show_update_error(self, error_message):
         """Показывает ошибку обновления"""
         QtWidgets.QMessageBox.warning(
@@ -211,52 +205,58 @@ class Controller:
 
     def install_update(self):
         """Устанавливает обновление"""
-        def install_thread():
-            try:
-                self.update_signal.update_progress.emit()
-                
-                if self.updater.download_and_install_update():
-                    self.update_signal.update_success.emit()
-                else:
-                    self.update_signal.update_failed.emit()
-                    
-            except Exception as e:
-                self.update_signal.update_error.emit(str(e))
-
-        threading.Thread(target=install_thread, daemon=True).start()
-
-    @QtCore.pyqtSlot()
-    def show_progress_dialog(self):
-        """Показывает диалог прогресса обновления"""
+        if self.update_in_progress:
+            return
+            
+        self.update_in_progress = True
+        
+        # Показываем диалог прогресса
         self.progress = QtWidgets.QProgressDialog("Установка обновления...", "Отмена", 0, 0, self.main_window)
         self.progress.setWindowTitle("Обновление")
         self.progress.setWindowModality(QtCore.Qt.WindowModal)
         self.progress.show()
+        
+        def install_thread():
+            try:
+                success = self.updater.download_and_install_update()
+                
+                # Закрываем диалог прогресса и показываем результат в главном потоке
+                QtCore.QTimer.singleShot(0, lambda: self._finish_update(success))
+                    
+            except Exception as e:
+                QtCore.QTimer.singleShot(0, lambda: self._finish_update(False, str(e)))
 
-    @QtCore.pyqtSlot()
-    def show_restart_message(self):
-        """Показывает сообщение о перезапуске"""
+        threading.Thread(target=install_thread, daemon=True).start()
+
+    def _finish_update(self, success, error_message=None):
+        """Завершает процесс обновления"""
+        self.update_in_progress = False
+        
         if hasattr(self, 'progress'):
             self.progress.close()
-        reply = QtWidgets.QMessageBox.information(
-            self.main_window,
-            "Обновление завершено",
-            "Обновление успешно установлено! Программа будет перезапущена.",
-            QtWidgets.QMessageBox.Ok
-        )
-        if reply == QtWidgets.QMessageBox.Ok:
-            self.restart_application()
-
-    @QtCore.pyqtSlot()
-    def show_update_failed_message(self):
-        """Показывает сообщение об ошибке обновления"""
-        if hasattr(self, 'progress'):
-            self.progress.close()
-        QtWidgets.QMessageBox.warning(
-            self.main_window,
-            "Ошибка",
-            "Не удалось установить обновление. Попробуйте позже."
-        )
+        
+        if success:
+            reply = QtWidgets.QMessageBox.information(
+                self.main_window,
+                "Обновление завершено",
+                "Обновление успешно установлено! Программа будет перезапущена.",
+                QtWidgets.QMessageBox.Ok
+            )
+            if reply == QtWidgets.QMessageBox.Ok:
+                self.restart_application()
+        else:
+            if error_message:
+                QtWidgets.QMessageBox.warning(
+                    self.main_window,
+                    "Ошибка",
+                    f"Не удалось установить обновление: {error_message}"
+                )
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self.main_window,
+                    "Ошибка",
+                    "Не удалось установить обновление. Попробуйте позже."
+                )
 
     def restart_application(self):
         """Перезапускает приложение"""
