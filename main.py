@@ -8,6 +8,7 @@ from PyQt5 import QtWidgets, QtCore
 from ui import MajesticBotWindow, SettingsWindow
 from bots import oranges, lumberjack, mine, quarry, captcha, mushrooms
 import threading
+import subprocess
 
 
 class Updater:
@@ -29,59 +30,70 @@ class Updater:
                 self.update_url = data['zipball_url']
                 return self.latest_version != self.current_version
             return False
+        except requests.exceptions.RequestException as e:
+            print(f"[Ошибка проверки обновлений]: Сетевая ошибка - {e}")
+            return False
         except Exception as e:
             print(f"[Ошибка проверки обновлений]: {e}")
             return False
 
-    def download_and_install_update(self):
+    def download_and_install_update(self, progress_callback=None):
         """Скачивает и устанавливает обновление"""
         try:
             if not self.update_url:
+                print("[Ошибка обновления] URL обновления не найден")
                 return False
 
-            # Создаем временную директорию
             temp_dir = tempfile.mkdtemp()
             zip_path = os.path.join(temp_dir, "update.zip")
             
-            # Скачиваем архив
             print(f"[Обновление] Скачивание обновления {self.latest_version}...")
-            response = requests.get(self.update_url, stream=True, timeout=30)
+            response = requests.get(self.update_url, stream=True, timeout=60)
+            response.raise_for_status()
+            
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded = 0
+            
             with open(zip_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if progress_callback and total_size:
+                            progress = int((downloaded / total_size) * 100)
+                            progress_callback(progress)
 
-            # Распаковываем архив
+            print("[Обновление] Распаковка архива...")
             extract_dir = os.path.join(temp_dir, "extracted")
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
 
-            # Находим корневую директорию распакованного содержимого
             extracted_items = os.listdir(extract_dir)
             if len(extracted_items) == 1:
                 update_src_dir = os.path.join(extract_dir, extracted_items[0])
             else:
                 update_src_dir = extract_dir
 
-            # Копируем файлы обновления (кроме настроек)
+            print("[Обновление] Копирование файлов...")
             self._copy_update_files(update_src_dir, os.getcwd())
             
-            # Очищаем временные файлы
             shutil.rmtree(temp_dir)
-            
             print("[Обновление] Обновление успешно установлено!")
             return True
             
+        except requests.exceptions.RequestException as e:
+            print(f"[Ошибка обновления] Ошибка загрузки: {e}")
+            return False
         except Exception as e:
             print(f"[Ошибка обновления]: {e}")
             return False
 
     def _copy_update_files(self, src_dir, dest_dir):
         """Копирует файлы обновления, исключая конфигурационные файлы"""
-        exclude_files = {'settings.ini', 'config.json'}  # Файлы которые не должны обновляться
-        exclude_dirs = {'.git', '__pycache__', 'logs'}   # Директории которые не должны обновляться
+        exclude_files = {'settings.ini', 'config.json', '.gitignore'}
+        exclude_dirs = {'.git', '__pycache__', 'logs', '.github'}
         
         for root, dirs, files in os.walk(src_dir):
-            # Исключаем директории
             dirs[:] = [d for d in dirs if d not in exclude_dirs]
             
             for file in files:
@@ -92,27 +104,29 @@ class Updater:
                 rel_path = os.path.relpath(src_file, src_dir)
                 dest_file = os.path.join(dest_dir, rel_path)
                 
-                # Создаем директории если нужно
-                os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-                
-                # Копируем файл
-                shutil.copy2(src_file, dest_file)
-                print(f"[Обновление] Обновлен: {rel_path}")
+                try:
+                    os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+                    shutil.copy2(src_file, dest_file)
+                    print(f"[Обновление] Обновлен: {rel_path}")
+                except Exception as e:
+                    print(f"[Ошибка копирования] {rel_path}: {e}")
 
 
-class Controller:
+class Controller(QtCore.QObject):
+    update_check_done = QtCore.pyqtSignal(bool, str)
+    
     def __init__(self):
-        self.app = QtWidgets.QApplication(sys.argv)
+        super().__init__()
+        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.main_window = MajesticBotWindow()
         self.settings_window = None
-        self.bot_threads = {}  # Для потоков ботов
-        self.bot_stop_flags = {}  # Для остановки ботов
+        self.bot_threads = {}
+        self.bot_stop_flags = {}
         
-        # Инициализация системы обновлений
         self.updater = Updater(
-            repo_owner="MaR1XyAnA",  # Замените на ваше имя пользователя GitHub
-            repo_name="Bot",         # Замените на название вашего репозитория
-            current_version="1.0.0"             # Текущая версия приложения
+            repo_owner="MaR1XyAnA",
+            repo_name="Bot",
+            current_version="1.0.0"
         )
         
         self.connect_signals()
@@ -125,7 +139,6 @@ class Controller:
                 button.clicked.connect(lambda _, a=action: self.run_bot(a))
         self.main_window.settings_btn.clicked.connect(self.open_settings)
         
-        # Добавляем кнопку проверки обновлений если она есть в UI
         if hasattr(self.main_window, 'update_btn'):
             self.main_window.update_btn.clicked.connect(self.check_for_updates)
 
@@ -137,7 +150,6 @@ class Controller:
         """Автоматическая проверка обновлений при старте"""
         if self.updater.check_for_updates():
             print(f"[Обновление] Доступна новая версия: {self.updater.latest_version}")
-            # Показываем уведомление в главном потоке
             QtCore.QMetaObject.invokeMethod(
                 self, 
                 'show_update_notification', 
@@ -201,14 +213,22 @@ class Controller:
         """Устанавливает обновление"""
         def install_thread():
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            progress = None
             try:
-                progress = QtWidgets.QProgressDialog("Установка обновления...", "Отмена", 0, 0, self.main_window)
+                progress = QtWidgets.QProgressDialog(
+                    "Установка обновления...", "Отмена", 0, 100, self.main_window
+                )
                 progress.setWindowTitle("Обновление")
                 progress.setWindowModality(QtCore.Qt.WindowModal)
                 progress.show()
                 
-                if self.updater.download_and_install_update():
-                    progress.close()
+                def update_progress(value):
+                    progress.setValue(value)
+                    QtWidgets.QApplication.processEvents()
+                
+                if self.updater.download_and_install_update(progress_callback=update_progress):
+                    if progress:
+                        progress.close()
                     QtWidgets.QMessageBox.information(
                         self.main_window,
                         "Обновление завершено",
@@ -216,7 +236,8 @@ class Controller:
                     )
                     self.restart_application()
                 else:
-                    progress.close()
+                    if progress:
+                        progress.close()
                     QtWidgets.QMessageBox.warning(
                         self.main_window,
                         "Ошибка",
@@ -224,6 +245,8 @@ class Controller:
                     )
                     
             except Exception as e:
+                if progress:
+                    progress.close()
                 QtWidgets.QMessageBox.warning(
                     self.main_window,
                     "Ошибка",
@@ -236,11 +259,10 @@ class Controller:
 
     def restart_application(self):
         """Перезапускает приложение"""
-        QtWidgets.QApplication.quit()
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        subprocess.Popen([sys.executable] + sys.argv)
+        self.app.quit()
 
     def run_bot(self, bot_name):
-        # ... существующий код run_bot без изменений ...
         bots_map = {
             "oranges": oranges,
             "lumberjack": lumberjack,
@@ -249,7 +271,6 @@ class Controller:
             "captcha": captcha,
             "mushrooms": mushrooms,
         }
-        # Если бот уже запущен — останавливаем
         if bot_name in self.bot_threads and self.bot_threads[bot_name].is_alive():
             print(f"[INFO] Остановка бота: {bot_name}")
             self.bot_stop_flags[bot_name] = True
@@ -287,12 +308,10 @@ class Controller:
             print("[Ошибка] Неизвестный бот:", bot_name)
 
     def save_settings(self):
-        # ... существующий код save_settings без изменений ...
         delay = self.settings_window.delay_input.text()
         key = self.settings_window.key_input.text()
         print(f"[Настройки сохранены] Задержка: {delay}s | Клавиша: {key}")
         QtWidgets.QMessageBox.information(self.settings_window, "Сохранено", "Настройки успешно сохранены!")
-        # Сохраняем настройки в файл
         try:
             with open("settings.ini", "w", encoding="utf-8") as f:
                 f.write(f"delay={delay}\n")
@@ -301,10 +320,8 @@ class Controller:
             print(f"[Ошибка] Не удалось сохранить настройки: {e}")
 
     def open_settings(self):
-        # ... существующий код open_settings без изменений ...
         if not self.settings_window or not self.settings_window.isVisible():
             self.settings_window = SettingsWindow()
-            # Загружаем настройки из файла
             try:
                 with open("settings.ini", "r", encoding="utf-8") as f:
                     for line in f:
@@ -313,7 +330,7 @@ class Controller:
                         elif line.startswith("key="):
                             self.settings_window.key_input.setText(line.strip().split("=", 1)[1])
             except FileNotFoundError:
-                pass  # Файл настроек еще не создан
+                pass
             self.settings_window.save_btn.clicked.connect(self.save_settings)
             self.settings_window.show()
         else:

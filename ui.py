@@ -95,6 +95,14 @@ class MajesticBotWindow(QtWidgets.QWidget):
             QPushButton#settings:hover {
                 background-color: #3399ff;
             }
+            QPushButton#update {
+                background-color: #43b581;
+                border-radius: 6px;
+                padding: 8px;
+            }
+            QPushButton#update:hover {
+                background-color: #3aa371;
+            }
         """)  # Стили для главного окна и кнопок
 
         grid = QtWidgets.QGridLayout()  # Сетка для кнопок действий
@@ -124,10 +132,15 @@ class MajesticBotWindow(QtWidgets.QWidget):
             btn.clicked.connect(lambda checked, t=text: self.log_message(f"Нажата кнопка: {t}"))  # Логирование нажатия
             self.action_buttons.append(btn)
 
-        self.settings_btn = QtWidgets.QPushButton("Настройки")  # Кнопка открытия настроек
+        self.settings_btn = QtWidgets.QPushButton("⚙️ Настройки")  # Кнопка открытия настроек
         self.settings_btn.setObjectName("settings")  # Для применения отдельного стиля
         self.settings_btn.setFixedSize(150, 50)  # <-- Размер кнопки "Настройки"
         self.settings_btn.clicked.connect(lambda: self.log_message("Открыто окно настроек"))  # Логирование открытия настроек
+
+        self.update_btn = QtWidgets.QPushButton("⬇️ Обновить")  # Кнопка проверки обновлений
+        self.update_btn.setObjectName("update")  # Для применения отдельного стиля
+        self.update_btn.setFixedSize(150, 50)  # <-- Размер кнопки "Обновить"
+        self.update_btn.clicked.connect(lambda: self.log_message("Проверка обновлений..."))  # Логирование
 
         # --- Логи ---
         self.log_view = QtWidgets.QTextEdit()  # Виджет для логов
@@ -142,15 +155,17 @@ class MajesticBotWindow(QtWidgets.QWidget):
             }
         """)
 
-        # Горизонтальный layout для кнопки настроек и логов
+        # Горизонтальный layout для кнопок и логов
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.settings_btn)
+        hbox.addWidget(self.update_btn)
         hbox.addWidget(self.log_view, stretch=1)
 
         vbox = QtWidgets.QVBoxLayout()  # Основной вертикальный layout
         vbox.addLayout(grid)            # Добавление сетки с кнопками
-        vbox.addLayout(hbox)            # Добавление горизонтального блока с настройками и логами
+        vbox.addLayout(hbox)            # Добавление горизонтального блока с кнопками и логами
         vbox.setAlignment(self.settings_btn, QtCore.Qt.AlignLeft)  # Кнопка настроек слева
+        vbox.setAlignment(self.update_btn, QtCore.Qt.AlignLeft)  # Кнопка обновления слева
         vbox.setContentsMargins(20, 20, 20, 20)  # Отступы
         self.setLayout(vbox)  # Установка layout для главного окна
 
