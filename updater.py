@@ -5,6 +5,7 @@ import os
 import requests
 import subprocess
 from PyQt5 import QtWidgets, QtCore
+import zipfile
 
 # --- НАСТРОЙКИ ---
 # !!! ВАЖНО: Замените на свои данные перед сборкой .exe !!!
@@ -47,19 +48,23 @@ def check_for_updates(current_version, parent_window):
 def download_and_apply_update(release_data, parent_window):
     """Скачивает и применяет обновление."""
     assets = release_data.get("assets", [])
-    exe_asset = None
-    for asset in assets:
-        if asset.get("name", "").endswith(".exe"):
-            exe_asset = asset
-            break
+    download_url = None
 
-    if not exe_asset:
-        QtWidgets.QMessageBox.critical(parent_window, "Ошибка", "Не найден .exe файл в последнем релизе на GitHub.")
+    # Сначала ищем .zip архив в ассетах, загруженных вручную
+    for asset in assets:
+        if asset.get("name", "").endswith(".zip"):
+            download_url = asset.get("browser_download_url")
+            break
+    
+    # Если в ассетах не нашли, используем автоматически сгенерированный GitHub'ом архив
+    if not download_url:
+        download_url = release_data.get("zipball_url")
+
+    if not download_url:
+        QtWidgets.QMessageBox.critical(parent_window, "Ошибка", "Не найден .zip архив с исходным кодом в последнем релизе на GitHub.")
         return
 
-    download_url = exe_asset["browser_download_url"]
-    new_exe_name = "RMRP_Helper_new.exe"
-    old_exe_name = os.path.basename(sys.executable)
+    zip_name = "update.zip"
 
     try:
         progress = QtWidgets.QProgressDialog("Скачивание обновления...", "Отмена", 0, 100, parent_window)
@@ -67,34 +72,69 @@ def download_and_apply_update(release_data, parent_window):
         progress.setWindowModality(QtCore.Qt.WindowModal)
         progress.show()
 
-        with requests.get(download_url, stream=True, verify=False) as r:
+        # Для zipball_url GitHub может потребовать User-Agent
+        headers = {'User-Agent': 'RMRP-Helper-Updater'}
+        with requests.get(download_url, stream=True, verify=False, headers=headers) as r:
             r.raise_for_status()
             total_size = int(r.headers.get('content-length', 0))
             downloaded_size = 0
-            with open(new_exe_name, 'wb') as f:
+            with open(zip_name, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     if progress.wasCanceled():
+                        os.remove(zip_name)
                         return
                     f.write(chunk)
                     downloaded_size += len(chunk)
                     if total_size > 0:
                         progress.setValue(int((downloaded_size / total_size) * 100))
         progress.setValue(100)
+        progress.setLabelText("Распаковка файлов...")
 
-        script = f"""
+        with zipfile.ZipFile(zip_name, 'r') as zip_ref:
+            # Эта логика обрабатывает как обычные архивы, так и архивы от GitHub,
+            # где все файлы лежат в одной подпапке.
+            files_to_extract = [
+                member for member in zip_ref.infolist()
+                if not member.is_dir() and member.filename.endswith(('.py', '.json'))
+            ]
+
+            root_folder = ""
+            if files_to_extract:
+                first_path_parts = files_to_extract[0].filename.replace('\\', '/').split('/')
+                if len(first_path_parts) > 1:
+                    potential_root = first_path_parts[0] + '/'
+                    if all(f.filename.replace('\\', '/').startswith(potential_root) for f in files_to_extract):
+                        root_folder = potential_root
+
+            for member in files_to_extract:
+                if root_folder:
+                    member.filename = member.filename[len(root_folder):]
+                if member.filename:
+                    zip_ref.extract(member, ".")
+        os.remove(zip_name)
+
+        reply = QtWidgets.QMessageBox.question(parent_window,
+                                               'Обновление завершено',
+                                               "Обновление успешно установлено.\nПерезапустить приложение сейчас, чтобы применить изменения?",
+                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                                               QtWidgets.QMessageBox.Yes)
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            script = f"""
 @echo off
 echo Ожидание закрытия приложения...
-timeout /t 2 /nobreak > NUL
-del "{old_exe_name}"
-rename "{new_exe_name}" "{old_exe_name}"
-start "" "{old_exe_name}"
+timeout /t 1 /nobreak > NUL
+echo Перезапуск...
+start "" "{sys.executable}" "{' '.join(sys.argv)}"
 del "%~f0"
 """
-        with open("update.bat", "w", encoding="cp866") as f:
-            f.write(script)
+            with open("restart.bat", "w", encoding="cp866") as f:
+                f.write(script)
 
-        subprocess.Popen("update.bat", shell=True)
-        QtWidgets.QApplication.quit()
+            subprocess.Popen("restart.bat", shell=True)
+            QtWidgets.QApplication.quit()
 
     except Exception as e:
         QtWidgets.QMessageBox.critical(parent_window, "Ошибка обновления", f"Не удалось скачать или применить обновление:\n{e}")
+        if os.path.exists(zip_name):
+            os.remove(zip_name)
