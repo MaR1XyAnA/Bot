@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets
 from ui_manager import App
 
 # ВЕРСИЯ ПРИЛОЖЕНИЯ
-APP_VERSION = "1.0"
+APP_VERSION = "1.1"
 
 if __name__ == "__main__":
     q_app = QtWidgets.QApplication(sys.argv)

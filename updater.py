@@ -8,8 +8,8 @@ from PyQt5 import QtWidgets, QtCore
 
 # --- НАСТРОЙКИ ---
 # !!! ВАЖНО: Замените на свои данные перед сборкой .exe !!!
-GITHUB_REPO_OWNER = "YourGitHubUsername"
-GITHUB_REPO_NAME = "YourRepoName"
+GITHUB_REPO_OWNER = "MaR1XyAnA"
+GITHUB_REPO_NAME = "Bot"
 # -----------------
 
 API_URL = f"https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/releases/latest"
